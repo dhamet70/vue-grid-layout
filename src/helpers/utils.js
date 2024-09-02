@@ -269,7 +269,7 @@ export function moveElement(layout: Layout, l: LayoutItem, x: Number, y: Number,
  *                                   by the user.
  */
 export function moveElementAwayFromCollision(layout: Layout, collidesWith: LayoutItem,
-                                             itemToMove: LayoutItem, isUserAction: ?boolean): Layout {
+                                             itemToMove: LayoutItem, isUserAction: ?boolean, horizontalShift: ?boolean): Layout {
 
   const preventCollision = false // we're already colliding
   // If there is enough space above the collision to put this element, move it there.
@@ -292,7 +292,31 @@ export function moveElementAwayFromCollision(layout: Layout, collidesWith: Layou
 
   // Previously this was optimized to move below the collision directly, but this can cause problems
   // with cascading moves, as an item may actually leapflog a collision and cause a reversal in order.
-  return moveElement(layout, itemToMove, undefined, itemToMove.y + 1, preventCollision);
+  return moveElement(layout, itemToMove, undefined, itemToMove.y + 1, horizontalShift, preventCollision);
+
+  const movingCordsData = {
+    $default: {
+      x: itemToMove.x,
+      y: itemToMove.y + 1,
+    },
+    [EMovingDirections.LEFT]: [itemToMove.x + collidesWith.w, collidesWith.y],
+    [EMovingDirections.RIGHT]: [itemToMove.x - collidesWith.w, collidesWith.y],
+    [EMovingDirections.UP]: [itemToMove.x, itemToMove.y + collidesWith.h],
+    [EMovingDirections.DOWN]: [itemToMove.x, itemToMove.y - collidesWith.h],
+  };
+
+  if(horizontalShift) {
+    const horizontalDirection = movingDirection === EMovingDirections.LEFT || movingDirection === EMovingDirections.RIGHT;
+
+    if(movingDirection in movingCordsData && !(horizontalDirection && collidesWith.w < itemToMove.w && collidesWith.x !== itemToMove.x)) {
+      const [x, y] = movingCordsData[movingDirection];
+
+      movingCordsData.$default.x = x;
+      movingCordsData.$default.y = y;
+    }
+  }
+
+  return moveElement(layout, itemToMove, movingCordsData.$default.x, movingCordsData.$default.y, horizontalShift, preventCollision);
 }
 
 /**
